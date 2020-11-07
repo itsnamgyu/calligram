@@ -7,11 +7,9 @@ class TextLoader:
 
     def load_data(self, dataset_name=None) -> Dict[Dict]:
         """
-        Returns a dictionary of dictionaries of all text data.
+        Returns a dictionary of dictionaries of all cleaned text data.
         :return: {
-            "dataset_name": {
-                "text_name": string
-            }
+            "text_id": string
         }
         """
         raise NotImplementedError()
@@ -27,8 +25,7 @@ class TextLoader:
         """
         raise NotImplementedError()
 
-    @staticmethod
-    def clean_string(original) -> str:
+    def clean_string(self, original) -> str:
         """
         Removes all invalid characters from a string.
 
