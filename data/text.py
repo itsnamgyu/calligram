@@ -1,6 +1,6 @@
 from typing import Dict, List
 import random
-
+import os
 
 class TextLoader:
     def __init__(self, character_set: List):
@@ -13,6 +13,26 @@ class TextLoader:
             "text_id": string
         }
         """
+        count = 0
+        newdict = {}
+
+        for root, dirs, files in os.walk(dataset_name):
+            for name in files:
+                if name.endswith(".txt"):
+                    string = ""
+                    fullpath = os.path.join(root, name)
+                    # this is the unique id given to each file
+                    count += 1
+                    # open the file in read mode and save all the contents to a string
+                    with open(fullpath, "r") as file:
+                        for line in file:
+                            string += line
+
+                    cleaned_text = self.clean_string(string)
+
+                    newdict[count] = cleaned_text
+
+        return newdict
         # raise NotImplementedError()
 
     def generate_random_text(self, length=None) -> str:
@@ -24,7 +44,6 @@ class TextLoader:
         generate a string that contains all characters once.
         :return:
         """
-        # str = ["a", "b", "c", "d", "e", "f"]
         string = ""
 
         max_word_length = 5  # if max sequence length without space
@@ -58,9 +77,12 @@ class TextLoader:
 
 
 if __name__ == "__main__":
-    loader = TextLoader(["가", "나", "다", "라", "마"])
+    loader = TextLoader(["가", "나", "다", "라", "마", ".", " "])
     text = loader.generate_random_text(length=10)
     print("Generated random text", text)
 
     clean_str = loader.clean_string("선(禪)의 시작은 부처님으로부터이다. 그런데 禪이란 쟈나의 음(音)을 그대로 <선나(禪那)>라고 쓰고 이를 한역하여 정려(瀞")
     print("clean text", clean_str)
+
+    loaded_data = loader.load_data('/Users/mac/calligram/dataset_test')
+    print("Load data", loaded_data)
