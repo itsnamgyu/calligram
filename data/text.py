@@ -84,5 +84,5 @@ if __name__ == "__main__":
     clean_str = loader.clean_string("선(禪)의 시작은 부처님으로부터이다. 그런데 禪이란 쟈나의 음(音)을 그대로 <선나(禪那)>라고 쓰고 이를 한역하여 정려(瀞")
     print("clean text", clean_str)
 
-    loaded_data = loader.load_data('/Users/mac/calligram/dataset_test')
+    loaded_data = loader.load_data('/Users/mac/calligram/kaist')
     print("Load data", loaded_data)
