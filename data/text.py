@@ -21,8 +21,6 @@ class TextLoader:
                 if name.endswith(".txt"):
                     string = ""
                     fullpath = os.path.join(root, name)
-                    # this is the unique id given to each file
-                    count += 1
                     # open the file in read mode and save all the contents to a string
                     with open(fullpath, "r") as file:
                         for line in file:
@@ -30,7 +28,7 @@ class TextLoader:
 
                     cleaned_text = self.clean_string(string)
 
-                    newdict[count] = cleaned_text
+                    newdict[name] = cleaned_text
 
         return newdict
         # raise NotImplementedError()
@@ -84,5 +82,5 @@ if __name__ == "__main__":
     clean_str = loader.clean_string("선(禪)의 시작은 부처님으로부터이다. 그런데 禪이란 쟈나의 음(音)을 그대로 <선나(禪那)>라고 쓰고 이를 한역하여 정려(瀞")
     print("clean text", clean_str)
 
-    loaded_data = loader.load_data('/Users/mac/calligram/kaist')
+    loaded_data = loader.load_data('/Users/mac/calligram/input/text/kaist_corpus')
     print("Load data", loaded_data)
