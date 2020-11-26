@@ -10,3 +10,12 @@ Calligram
 ## Modules
 
 - data: load glyph (character image) and text (plain string) data
+
+## Dataset Preparation 
+Download modified KAIST corpus dataset and move to directory:  
+`input/text/kaist_corpus`  
+
+**Changes:**  
+* Moved all txt files into a single folder/directory named kaist_corpus.  
+* Folder contains all the txt files renamed into format: `kaistcorpus_written_raw_or_(subdirectories)_(unique_id).txt`  
+* Removed all tags from the txt files to contain only the main contents.  
