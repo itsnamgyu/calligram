@@ -29,6 +29,8 @@ plt.imshow(img))
 
 ## Data Preparation
 
+Data files are saved in the `Dataset Modified` folder in our Google Drive.
+
 ### [Text] Kaist Corbus
 
 Download modified KAIST corpus dataset and move to directory:
