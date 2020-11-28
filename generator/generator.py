@@ -7,24 +7,24 @@ import argparse
 import json
 import os
 import random
-from PIL import Image
- 
+from PIL import Image,ImageChops 
+from data.glyph import GlyphLoader
+import matplotlib.pyplot as plt
+
 """
 global variables for page generation
 """
-GLOBAL_CW_HEIGHT = 200 # character height and width 
-GLOBAL_CW_WIDTH = 300
+GLOBAL_CW_HEIGHT = 50 # character height and width 
+GLOBAL_CW_WIDTH = 50
 GLOBAL_MARGIN_HEIGHT = 100
 GLOBAL_MARGIN_WIDTH = 100
 GLOBAL_WIDTH = 1000
 GLOBAL_HEIGHT = 1000 
+GLOBAL_ROT = 20 
 
-verticals = []
-images = ['../set/char_data/AC4B/HIL_006_0001_1371_AC4B_KO_001_091028.tif', 
-'../set/char_data/D3E3/HIL_006_0001_1998_D3E3_KO_001_091028.tif',
-'../set/char_data/AC4B/HIL_006_0001_1371_AC4B_KO_001_091028.tif',
-'../set/char_data/AC4B/HIL_006_0001_1371_AC4B_KO_001_091028.tif', 
-'../set/char_data/D3E3/HIL_006_0001_1998_D3E3_KO_001_091028.tif'
+images = ['../input/1.png', 
+'../input/2.png', 
+'../input/3.png', 
 ]
 
 def generate_page_data(text, output_path) :
@@ -36,13 +36,13 @@ def generate_page_data(text, output_path) :
     """
 
     y = 0
-    dst = Image.new('RGB', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT),"WHITE")
+    dst = Image.new('RGBA', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT),"WHITE")
     for i in range(0,10) : 
         im = generate_single_line("hello my name is",0,y)
         dst = get_concat_v_resize(dst,im) 
         y = y + GLOBAL_CW_HEIGHT 
 
-    dst = get_concat_v_resize(dst,Image.new('RGB', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT),"WHITE"))
+    dst = get_concat_v_resize(dst,Image.new('RGBA', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT),"WHITE"))
     dst.save(output_path) 
 
 def generate_single_line(text, start_x, start_y) : 
@@ -57,14 +57,14 @@ def generate_single_line(text, start_x, start_y) :
     previous_y = start_y + GLOBAL_MARGIN_HEIGHT
     previous_rotation = 0
     i = 0
-    dst = Image.new('RGB', (GLOBAL_MARGIN_WIDTH, GLOBAL_CW_HEIGHT),"WHITE")
+    dst = Image.new("RGBA", (GLOBAL_MARGIN_WIDTH, GLOBAL_CW_HEIGHT),"white")
 
     for c in text :
-        dst = get_concat_h_resize(dst,Image.open(images[i%5]))
+        dst = get_concat_h_resize(dst,trim(Image.open(images[i%3])).convert("RGBA"))
         previous_x, previous_y, previous_rotation = calculate_next_position(previous_x, previous_y, previous_rotation)
         i = i + 1 
-        
-    dst = get_concat_h_resize(dst,Image.new('RGB', (GLOBAL_MARGIN_WIDTH, GLOBAL_CW_HEIGHT),"WHITE"))
+
+    dst = get_concat_h_resize(dst,Image.new("RGBA", (GLOBAL_MARGIN_WIDTH, GLOBAL_CW_HEIGHT)))
     return dst 
 def calculate_next_position(previous_x, previous_y, previous_rotation) : 
     """
@@ -80,6 +80,10 @@ def calculate_next_position(previous_x, previous_y, previous_rotation) :
     return int(previous_x), int(previous_y), int(previous_rotation) 
 
 def get_concat_h_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True):
+    ro = GLOBAL_ROT*random.uniform(-1,1)
+    im2 = im2.rotate(ro, expand=1)
+    im2.resize((GLOBAL_CW_WIDTH,GLOBAL_CW_HEIGHT),Image.ANTIALIAS)
+
     if im1.height == im2.height:
         _im1 = im1
         _im2 = im2
@@ -90,12 +94,20 @@ def get_concat_h_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True)
     else:
         _im1 = im1
         _im2 = im2.resize((int(im2.width * im1.height / im2.height), im1.height), resample=resample)
-    dst = Image.new('RGB', (_im1.width + _im2.width, _im1.height),"WHITE")
+    dst = Image.new('RGBA', (_im1.width + _im2.width, _im1.height),"WHITE")
     dst.paste(_im1, (0, 0))
-    ro = 30*random.uniform(-1,1)
-    _im2 = _im2.rotate(ro, expand=1, fillcolor = "white")
-    dst.paste(_im2, (_im1.width, 0))
+    dst.paste(_im2, (_im1.width,0), _im2.convert('RGBA'))
+
     return dst
+
+def trim(im):
+    bg = Image.new(im.mode, im.size, im.getpixel((0,0)))
+    diff = ImageChops.difference(im, bg)
+    diff = ImageChops.add(diff, diff, 2.0, -100)
+    bbox = diff.getbbox()
+    if bbox:
+        return im.crop(bbox)
+        
 
 def get_concat_v_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True):
     if im1.width == im2.width:
@@ -108,9 +120,8 @@ def get_concat_v_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True)
     else:
         _im1 = im1
         _im2 = im2.resize((im1.width, int(im2.height * im1.width / im2.width)), resample=resample)
-    dst = Image.new('RGB', (_im1.width, _im1.height + _im2.height),"WHITE")
+    dst = Image.new("RGBA", (_im1.width, _im1.height + _im2.height))
     dst.paste(_im1, (0, 0))
-    dst.paste(_im2, (0, _im1.height - 30 ))
+    dst.paste(_im2, (0, _im1.height),_im2.convert("RGBA"))
     return dst
 
-generate_page_data("temperate string", "output.jpg")
