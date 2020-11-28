@@ -130,3 +130,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# code to modify corpus dataset
+data/kaist_corpus.py
