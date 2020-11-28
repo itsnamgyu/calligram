@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
     Script for generating full page text image 
 
@@ -9,8 +8,7 @@ import os
 import random
 from PIL import Image,ImageChops 
 from data.glyph import GlyphLoader
-import matplotlib.pyplot as plt
-
+from data.text import TextLoader
 """
 global variables for page generation
 """
@@ -22,10 +20,8 @@ GLOBAL_WIDTH = 1000
 GLOBAL_HEIGHT = 1000 
 GLOBAL_ROT = 20 
 
-images = ['../input/1.png', 
-'../input/2.png', 
-'../input/3.png', 
-]
+
+gl = GlyphLoader("/home/itsnamgyu/calligram/input/glyph/hicau_mod0/", ext="tif")
 
 def generate_page_data(text, output_path) :
     """
@@ -36,13 +32,15 @@ def generate_page_data(text, output_path) :
     """
 
     y = 0
+    n = 10
     dst = Image.new('RGBA', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT),"WHITE")
-    for i in range(0,10) : 
-        im = generate_single_line("hello my name is",0,y)
+    for i in range(0, len(text), n) :
+        im = generate_single_line(text[i:i+n],0,y)
         dst = get_concat_v_resize(dst,im) 
         y = y + GLOBAL_CW_HEIGHT 
 
     dst = get_concat_v_resize(dst,Image.new('RGBA', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT),"WHITE"))
+    
     dst.save(output_path) 
 
 def generate_single_line(text, start_x, start_y) : 
@@ -58,12 +56,11 @@ def generate_single_line(text, start_x, start_y) :
     previous_rotation = 0
     i = 0
     dst = Image.new("RGBA", (GLOBAL_MARGIN_WIDTH, GLOBAL_CW_HEIGHT),"white")
-
+    
     for c in text :
-        dst = get_concat_h_resize(dst,trim(Image.open(images[i%3])).convert("RGBA"))
+        dst = get_concat_h_resize(dst,trim(gl.load_glyph(c,0)).convert("RGBA"))
         previous_x, previous_y, previous_rotation = calculate_next_position(previous_x, previous_y, previous_rotation)
         i = i + 1 
-
     dst = get_concat_h_resize(dst,Image.new("RGBA", (GLOBAL_MARGIN_WIDTH, GLOBAL_CW_HEIGHT)))
     return dst 
 def calculate_next_position(previous_x, previous_y, previous_rotation) : 
@@ -95,9 +92,10 @@ def get_concat_h_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True)
         _im1 = im1
         _im2 = im2.resize((int(im2.width * im1.height / im2.height), im1.height), resample=resample)
     dst = Image.new('RGBA', (_im1.width + _im2.width, _im1.height),"WHITE")
+    
     dst.paste(_im1, (0, 0))
     dst.paste(_im2, (_im1.width,0), _im2.convert('RGBA'))
-
+    
     return dst
 
 def trim(im):
@@ -123,5 +121,28 @@ def get_concat_v_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True)
     dst = Image.new("RGBA", (_im1.width, _im1.height + _im2.height))
     dst.paste(_im1, (0, 0))
     dst.paste(_im2, (0, _im1.height),_im2.convert("RGBA"))
+    
     return dst
 
+
+gl = GlyphLoader("/home/itsnamgyu/calligram/input/glyph/hicau_mod0/", ext="tif")
+s = str(gl.character_set)[:1000]
+character_set = []
+i = 0
+for character in gl.character_set :
+    character_set.append(chr(int(character, 16)))
+    i = i + 1
+generate_page_data( "나는이세진입니다오늘이러한것을하느라시간을보냈는데참의미가있었던것같네요호호호","/home/itsnamgyu/calligram/output/{}.png".format(i))
+    
+"""    
+
+loader = TextLoader(character_set)
+loaded_data = loader.load_data('/home/itsnamgyu/calligram/input/text/kaist_corpus')
+i = 0
+print("finished loaded text...")
+for key in loaded_data:    
+    generate_page_data(gl, loaded_data[key],"/home/itsnamgyu/calligram/output/{}.jpg".format(i))
+    print("created {} data..".format(i))
+    exit(0)
+    i = i + 1
+"""
