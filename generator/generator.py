@@ -16,21 +16,22 @@ GLOBAL_MARGIN_HEIGHT = 100
 GLOBAL_MARGIN_WIDTH = 100
 GLOBAL_WIDTH = 1000
 GLOBAL_HEIGHT = 1000
-GLOBAL_ROT = 20
+GLOBAL_ROT = 5
 
 
-def generate_page_data(gl: GlyphLoader, text, output_path=None) -> Image:
+def generate_page_data(gl: GlyphLoader, text, variant=None, output_path=None) -> Image:
     """
     :param gl:
     :param text: text to print out on the page
     :param output_path: path to save the generated image data if specified.
+    :param variant: glyph variant
     :return: Image
     """
     y = 0
     n = 10
     dst = Image.new('RGBA', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT), "WHITE")
     for i in range(0, len(text), n):
-        im = generate_single_line(gl, text[i:i + n], 0, y)
+        im = generate_single_line(gl, text[i:i + n], 0, y, variant)
         dst = get_concat_v_resize(dst, im)
         y = y + GLOBAL_CW_HEIGHT
 
@@ -41,13 +42,14 @@ def generate_page_data(gl: GlyphLoader, text, output_path=None) -> Image:
     return dst
 
 
-def generate_single_line(gl: GlyphLoader, text, start_x, start_y):
+def generate_single_line(gl: GlyphLoader, text, start_x, start_y, variant=None):
     """
     print out a single line of images 
         :param : 
             text : text to be printed 
             start_x, start_y : position of the starting character 
-            end_x, end_y : position of the last character 
+            end_x, end_y : position of the last character
+            variant : glyph variant
     """
     previous_x = start_x + GLOBAL_MARGIN_WIDTH
     previous_y = start_y + GLOBAL_MARGIN_HEIGHT
@@ -56,7 +58,7 @@ def generate_single_line(gl: GlyphLoader, text, start_x, start_y):
     dst = Image.new("RGBA", (GLOBAL_MARGIN_WIDTH, GLOBAL_CW_HEIGHT), "white")
 
     for c in text:
-        dst = get_concat_h_resize(dst, trim(gl.load_glyph(c, 0)).convert("RGBA"))
+        dst = get_concat_h_resize(dst, trim(gl.load_glyph(c, variant)).convert("RGBA"))
         previous_x, previous_y, previous_rotation = calculate_next_position(previous_x, previous_y, previous_rotation)
         i = i + 1
     dst = get_concat_h_resize(dst, Image.new("RGBA", (GLOBAL_MARGIN_WIDTH, GLOBAL_CW_HEIGHT)))
