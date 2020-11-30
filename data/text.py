@@ -1,12 +1,15 @@
 from typing import Dict, List
 import random
+import tqdm
 import os
 
-class TextLoader:
-    def __init__(self, character_set: List):
-        self.character_set = character_set
 
-    def load_data(self, dataset_name=None) -> Dict:
+class TextLoader:
+    def __init__(self, character_list: List):
+        self.character_list = character_list
+        self.character_set = set(character_list)
+
+    def load_data(self, dataset_name=None, verbose=False) -> Dict:
         """
         Returns a dictionary of dictionaries of all cleaned text data.
         :return: {
@@ -17,7 +20,7 @@ class TextLoader:
         newdict = {}
 
         for root, dirs, files in os.walk(dataset_name):
-            for name in files:
+            for name in tqdm.tqdm(files) if verbose else files:
                 if name.endswith(".txt"):
                     string = ""
                     fullpath = os.path.join(root, name)
@@ -48,7 +51,7 @@ class TextLoader:
         for i in range(length):
             word_length = random.randint(1, max_word_length)
             for j in range(word_length):
-                string += random.choice(self.character_set)
+                string += random.choice(self.character_list)
             string += " "
         return string.strip()
 
@@ -67,10 +70,7 @@ class TextLoader:
                 string += c
 
         # Remove repetitive spaces
-        new_string = ""
-        for k in string.split():
-            new_string += k + " "
-
+        new_string = " ".join(string.split())
         return new_string.strip()
 
 
