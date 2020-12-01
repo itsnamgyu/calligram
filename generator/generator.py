@@ -16,7 +16,7 @@ GLOBAL_MARGIN_HEIGHT = 100
 GLOBAL_MARGIN_WIDTH = 100
 GLOBAL_WIDTH = 1000
 GLOBAL_HEIGHT = 1000
-GLOBAL_ROT = 5
+GLOBAL_ROT = 10
 
 
 def generate_page_data(gl: GlyphLoader, text, variant=None, output_path=None) -> Image:
@@ -28,7 +28,7 @@ def generate_page_data(gl: GlyphLoader, text, variant=None, output_path=None) ->
     :return: Image
     """
     y = 0
-    n = 10
+    n = 20
     dst = Image.new('RGBA', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT), "WHITE")
     for i in range(0, len(text), n):
         im = generate_single_line(gl, text[i:i + n], 0, y, n, variant)
@@ -59,12 +59,17 @@ def generate_single_line(gl: GlyphLoader, text, start_x, start_y, size, variant=
     text += ' ' * (size - len(text))
     for c in text:
         if c.isspace():
-            dst = get_concat_h_resize(dst, Image.new("RGBA", (GLOBAL_CW_WIDTH, GLOBAL_CW_HEIGHT), "white"))
-        else : 
-            dst = get_concat_h_resize(dst, trim(gl.load_glyph(c, variant)).convert("RGBA"))
+            img = Image.new("RGBA", (GLOBAL_CW_WIDTH, GLOBAL_CW_HEIGHT),"white")
+            dst = get_concat_h_resize(dst, img,True,False)
+        elif c == '.' : 
+            img = gl.load_glyph(c, variant).convert("RGBA")
+            dst = get_concat_h_resize(dst, img,True,True)
+        else :
+            img = trim(gl.load_glyph(c, variant)).convert("RGBA")
+            dst = get_concat_h_resize(dst, img,True,True)
         previous_x, previous_y, previous_rotation = calculate_next_position(previous_x, previous_y, previous_rotation)
         i = i + 1
-    dst = get_concat_h_resize(dst, Image.new("RGBA", (GLOBAL_MARGIN_WIDTH, GLOBAL_CW_HEIGHT)))
+    dst = get_concat_h_resize(dst, Image.new("RGBA", (GLOBAL_MARGIN_WIDTH, GLOBAL_CW_HEIGHT),"white"),True,False)
     return dst
 
 
@@ -82,10 +87,12 @@ def calculate_next_position(previous_x, previous_y, previous_rotation):
     return int(previous_x), int(previous_y), int(previous_rotation)
 
 
-def get_concat_h_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True):
-    ro = GLOBAL_ROT * random.uniform(-1, 1)
-    im2 = im2.rotate(ro, expand=1)
-    im2.resize((GLOBAL_CW_WIDTH, GLOBAL_CW_HEIGHT), Image.ANTIALIAS)
+def get_concat_h_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True, rotate_image=True):
+    if rotate_image  : 
+        ro = GLOBAL_ROT * random.uniform(-1, 1)
+        im2 = im2.rotate(ro, fillcolor='WHITE', expand=True)
+    if resize_big_image :
+        im2.resize((GLOBAL_CW_WIDTH, GLOBAL_CW_HEIGHT), Image.ANTIALIAS)
 
     if im1.height == im2.height:
         _im1 = im1
@@ -114,6 +121,7 @@ def trim(im):
         return im.crop(bbox)
 
 
+
 def get_concat_v_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True):
     if im1.width == im2.width:
         _im1 = im1
@@ -140,7 +148,7 @@ def main():
     for character in gl.character_set:
         character_set.append(chr(int(character, 16)))
         i = i + 1
-    generate_page_data(gl,"나는 이세진입니다 오늘 이러한 것 을 하느라 시간을 보냈는데 참 의미가 있었던 것 같네요 호호호", 1, "/home/itsnamgyu/calligram/output/{}.png".format(i))
+    generate_page_data(gl,"나는 이세진입니다. 오늘 이러한 것 을 하느라 시간을 보냈는데 참 의미가 있었던 것 같네요 호호호나는 이세진입니다. 오늘 이러한 것 을 하느라 시간을 보냈는데 참 의미가 있었던 것 같네요 호호호나는 이세진입니다. 오늘 이러한 것 을 하느라 시간을 보냈는데 참 의미가 있었던 것 같네요 호호호나는 이세진입니다. 오늘 이러한 것 을 하느라 시간을 보냈는데 참 의미가 있었던 것 같네요 호호호나는 이세진입니다. 오늘 이러한 것 을 하느라 시간을 보냈는데 참 의미가 있었던 것 같네요 호호호", 2, "/home/itsnamgyu/calligram/output/{}.png".format(i))
 
 
 if __name__ == "__main__":
