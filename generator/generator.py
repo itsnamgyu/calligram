@@ -18,7 +18,7 @@ GLOBAL_MARGIN_WIDTH = 100
 GLOBAL_WIDTH = 1000
 GLOBAL_HEIGHT = 1000
 GLOBAL_ROT = 10
-GLOBAL_LINE_GAP = 30 
+GLOBAL_LINE_GAP = 30
 LETTER_PER_LINE = 50
 special_characters = ['.', ',', '?', ';', '!', '"', '\'', '/', '\'', '~','@', '#', '%','^','&','*','(',')','-','+', '>', '<', '[', ']', '{', '}', '₩']
 def generate_page_data(gl: GlyphLoader, text, variant=None, output_path=None, character_per_page=2000) -> Image:
@@ -30,7 +30,7 @@ def generate_page_data(gl: GlyphLoader, text, variant=None, output_path=None, ch
     :return: Image
     """
     y = 0
-    dst = Image.new('RGBA', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT), "WHITE")
+    dst = Image.new('RGB', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT), "WHITE")
     left = (character_per_page  - len(text)) / LETTER_PER_LINE
 
     for i in range(0, len(text), LETTER_PER_LINE):
@@ -38,9 +38,9 @@ def generate_page_data(gl: GlyphLoader, text, variant=None, output_path=None, ch
         dst = get_concat_v_resize(dst, im)
         y = y + GLOBAL_CW_HEIGHT
 
-    dst = get_concat_v_resize(dst, Image.new('RGBA', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT), "WHITE"),True,True)
+    dst = get_concat_v_resize(dst, Image.new('RGB', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT), "WHITE"),True,True)
     if GLOBAL_HEIGHT-y > 0 :
-        dst = get_concat_v_resize(dst, Image.new('RGBA', (GLOBAL_WIDTH, GLOBAL_HEIGHT-y), "WHITE"),True,True)
+        dst = get_concat_v_resize(dst, Image.new('RGB', (GLOBAL_WIDTH, GLOBAL_HEIGHT-y), "WHITE"),True,True)
 
     if output_path:
         dst.save(output_path)
@@ -60,22 +60,22 @@ def generate_single_line(gl: GlyphLoader, text, start_x, start_y, size, variant=
     previous_y = start_y + GLOBAL_MARGIN_HEIGHT
     previous_rotation = 0
     i = 0
-    dst = Image.new("RGBA", (GLOBAL_MARGIN_WIDTH, GLOBAL_CW_HEIGHT), "white")
+    dst = Image.new("RGB", (GLOBAL_MARGIN_WIDTH, GLOBAL_CW_HEIGHT), "white")
     text = text.lstrip()
     text += ' ' * (size - len(text))
     for c in text:
         if c.isspace():
-            img = Image.new("RGBA", (GLOBAL_CW_WIDTH, GLOBAL_CW_HEIGHT),"white")
+            img = Image.new("RGB", (GLOBAL_CW_WIDTH, GLOBAL_CW_HEIGHT),"white")
             dst = get_concat_h_resize(dst, img,True,False)
         elif c in special_characters : 
-            img = gl.load_glyph(c, variant).convert("RGBA")
+            img = gl.load_glyph(c, variant).convert("RGB")
             dst = get_concat_h_resize(dst, img,True,True)
         else :
-            img = trim(gl.load_glyph(c, variant)).convert("RGBA")
+            img = trim(gl.load_glyph(c, variant)).convert("RGB")
             dst = get_concat_h_resize(dst, img,True,True)
         previous_x, previous_y, previous_rotation = calculate_next_position(previous_x, previous_y, previous_rotation)
         i = i + 1
-    dst = get_concat_h_resize(dst, Image.new("RGBA", (GLOBAL_MARGIN_WIDTH, GLOBAL_CW_HEIGHT),"white"),True,False)
+    dst = get_concat_h_resize(dst, Image.new("RGB", (GLOBAL_MARGIN_WIDTH, GLOBAL_CW_HEIGHT),"white"),True,False)
     return dst
 
 
@@ -110,10 +110,10 @@ def get_concat_h_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True,
     else:
         _im1 = im1
         _im2 = im2.resize((int(im2.width * im1.height / im2.height), im1.height), resample=resample)
-    dst = Image.new('RGBA', (_im1.width + _im2.width, _im1.height), "WHITE")
+    dst = Image.new('RGB', (_im1.width + _im2.width, _im1.height), "WHITE")
 
     dst.paste(_im1, (0, 0))
-    dst.paste(_im2, (_im1.width, 0), _im2.convert('RGBA'))
+    dst.paste(_im2, (_im1.width, 0))
 
     return dst
 
@@ -141,14 +141,15 @@ def get_concat_v_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True,
         _im2 = im2.resize((im1.width, int(im2.height * im1.width / im2.width)), resample=resample)
 
     if not isEmpty : 
-        dst = Image.new("RGBA", (_im1.width, _im1.height + _im2.height + 30))
+        GAP = int(GLOBAL_LINE_GAP * random.uniform(0.3,1))
+        dst = Image.new("RGB", (_im1.width, _im1.height + _im2.height + GAP))
         dst.paste(_im1, (0, 0))
-        dst.paste(Image.new("RGBA", (_im1.width, GLOBAL_LINE_GAP),"white"), (0, _im1.height ))
-        dst.paste(_im2, (0, _im1.height  + GLOBAL_LINE_GAP), _im2.convert("RGBA"))
+        dst.paste(Image.new("RGB", (_im1.width, GAP),"white"), (0, _im1.height ))
+        dst.paste(_im2, (0, _im1.height  + GAP))
     else :
-        dst = Image.new("RGBA", (_im1.width, _im1.height + _im2.height))
+        dst = Image.new("RGB", (_im1.width, _im1.height + _im2.height))
         dst.paste(_im1, (0, 0))
-        dst.paste(_im2, (0, _im1.height), _im2.convert("RGBA"))
+        dst.paste(_im2, (0, _im1.height))
 
     return dst
 
@@ -174,11 +175,12 @@ def main():
         x = all_data[data]
         strings = [x[k: k + character_per_page] for k in range(0, len(x), character_per_page)]
         for string in strings : 
-            start = time.time()
             j = j + 1
-            generate_page_data(gl,string, 1, "/home/itsnamgyu/calligram/output/{}_{}.png".format(i,j),character_per_page)
-            end = time.time()
-            print("finished generating {}_{}.png image in {} sec..".format(i,j,end-start) )
+            for m in range(0, gl.variants) :
+                start = time.time()
+                generate_page_data(gl,string, m, "/home/itsnamgyu/calligram/output/text{}_{}_{}.jpg".format(i,j,m),character_per_page)
+                end = time.time()
+                print("f/home/itsnamgyu/calligram/output/text{}_{}_{}.jpg".format(i,j,m,end-start) )
 
  
 
