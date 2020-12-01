@@ -31,7 +31,7 @@ def generate_page_data(gl: GlyphLoader, text, variant=None, output_path=None) ->
     n = 10
     dst = Image.new('RGBA', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT), "WHITE")
     for i in range(0, len(text), n):
-        im = generate_single_line(gl, text[i:i + n], 0, y, variant)
+        im = generate_single_line(gl, text[i:i + n], 0, y, n, variant)
         dst = get_concat_v_resize(dst, im)
         y = y + GLOBAL_CW_HEIGHT
 
@@ -42,7 +42,7 @@ def generate_page_data(gl: GlyphLoader, text, variant=None, output_path=None) ->
     return dst
 
 
-def generate_single_line(gl: GlyphLoader, text, start_x, start_y, variant=None):
+def generate_single_line(gl: GlyphLoader, text, start_x, start_y, size, variant=None):
     """
     print out a single line of images 
         :param : 
@@ -56,9 +56,12 @@ def generate_single_line(gl: GlyphLoader, text, start_x, start_y, variant=None):
     previous_rotation = 0
     i = 0
     dst = Image.new("RGBA", (GLOBAL_MARGIN_WIDTH, GLOBAL_CW_HEIGHT), "white")
-
+    text += ' ' * (size - len(text))
     for c in text:
-        dst = get_concat_h_resize(dst, trim(gl.load_glyph(c, variant)).convert("RGBA"))
+        if c.isspace():
+            dst = get_concat_h_resize(dst, Image.new("RGBA", (GLOBAL_CW_WIDTH, GLOBAL_CW_HEIGHT), "white"))
+        else : 
+            dst = get_concat_h_resize(dst, trim(gl.load_glyph(c, variant)).convert("RGBA"))
         previous_x, previous_y, previous_rotation = calculate_next_position(previous_x, previous_y, previous_rotation)
         i = i + 1
     dst = get_concat_h_resize(dst, Image.new("RGBA", (GLOBAL_MARGIN_WIDTH, GLOBAL_CW_HEIGHT)))
@@ -137,7 +140,7 @@ def main():
     for character in gl.character_set:
         character_set.append(chr(int(character, 16)))
         i = i + 1
-    generate_page_data("나는이세진입니다오늘이러한것을하느라시간을보냈는데참의미가있었던것같네요호호호", "/home/itsnamgyu/calligram/output/{}.png".format(i))
+    generate_page_data(gl,"나는 이세진입니다 오늘 이러한 것 을 하느라 시간을 보냈는데 참 의미가 있었던 것 같네요 호호호", 1, "/home/itsnamgyu/calligram/output/{}.png".format(i))
 
 
 if __name__ == "__main__":

@@ -59,7 +59,7 @@ class GlyphLoader:
         if variant_index is None:
             variant_index = random.randint(0, len(self.pids))
         pid = self.pids[variant_index]
-        hex = "{:04x}".format(ord(character))
+        hex = "{:04X}".format(ord(character))
         path = os.path.join(self.dataset_dir, pid, "{}.{}".format(hex, self.ext))
 
         if path_only:
