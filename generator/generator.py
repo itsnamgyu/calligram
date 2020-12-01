@@ -176,6 +176,9 @@ def main():
         strings = [x[k: k + character_per_page] for k in range(0, len(x), character_per_page)]
         for string in strings : 
             j = j + 1
+            text_file = open("/home/itsnamgyu/calligram/output/text{}_{}.txt".format(i,j), "w")
+            text_file.write(string)
+            text_file.close()
             for m in range(0, gl.variants) :
                 start = time.time()
                 generate_page_data(gl,string, m, "/home/itsnamgyu/calligram/output/text{}_{}_{}.jpg".format(i,j,m),character_per_page)
