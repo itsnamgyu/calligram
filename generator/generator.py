@@ -9,6 +9,7 @@ import random
 from PIL import Image, ImageChops
 from data.glyph import GlyphLoader
 from data.text import TextLoader
+import time
 
 GLOBAL_CW_HEIGHT = 50  # character height and width
 GLOBAL_CW_WIDTH = 50
@@ -17,9 +18,10 @@ GLOBAL_MARGIN_WIDTH = 100
 GLOBAL_WIDTH = 1000
 GLOBAL_HEIGHT = 1000
 GLOBAL_ROT = 10
-MAX_SIZE = 400
-
-def generate_page_data(gl: GlyphLoader, text, variant=None, output_path=None) -> Image:
+GLOBAL_LINE_GAP = 30 
+LETTER_PER_LINE = 50
+special_characters = ['.', ',', '?', ';', '!', '"', '\'', '/', '\'', '~','@', '#', '%','^','&','*','(',')','-','+', '>', '<', '[', ']', '{', '}', '₩']
+def generate_page_data(gl: GlyphLoader, text, variant=None, output_path=None, character_per_page=2000) -> Image:
     """
     :param gl:
     :param text: text to print out on the page
@@ -28,15 +30,17 @@ def generate_page_data(gl: GlyphLoader, text, variant=None, output_path=None) ->
     :return: Image
     """
     y = 0
-    n = 20
     dst = Image.new('RGBA', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT), "WHITE")
-    text += ' ' * (MAX_SIZE - len(text))
-    for i in range(0, len(text), n):
-        im = generate_single_line(gl, text[i:i + n], 0, y, n, variant)
+    left = (character_per_page  - len(text)) / LETTER_PER_LINE
+
+    for i in range(0, len(text), LETTER_PER_LINE):
+        im = generate_single_line(gl, text[i:i + LETTER_PER_LINE], 0, y, LETTER_PER_LINE, variant)
         dst = get_concat_v_resize(dst, im)
         y = y + GLOBAL_CW_HEIGHT
 
-    dst = get_concat_v_resize(dst, Image.new('RGBA', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT), "WHITE"))
+    dst = get_concat_v_resize(dst, Image.new('RGBA', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT), "WHITE"),True,True)
+    if GLOBAL_HEIGHT-y > 0 :
+        dst = get_concat_v_resize(dst, Image.new('RGBA', (GLOBAL_WIDTH, GLOBAL_HEIGHT-y), "WHITE"),True,True)
 
     if output_path:
         dst.save(output_path)
@@ -63,7 +67,7 @@ def generate_single_line(gl: GlyphLoader, text, start_x, start_y, size, variant=
         if c.isspace():
             img = Image.new("RGBA", (GLOBAL_CW_WIDTH, GLOBAL_CW_HEIGHT),"white")
             dst = get_concat_h_resize(dst, img,True,False)
-        elif c == '.' : 
+        elif c in special_characters : 
             img = gl.load_glyph(c, variant).convert("RGBA")
             dst = get_concat_h_resize(dst, img,True,True)
         else :
@@ -124,7 +128,7 @@ def trim(im):
 
 
 
-def get_concat_v_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True):
+def get_concat_v_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True, isEmpty=False):
     if im1.width == im2.width:
         _im1 = im1
         _im2 = im2
@@ -135,9 +139,16 @@ def get_concat_v_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True)
     else:
         _im1 = im1
         _im2 = im2.resize((im1.width, int(im2.height * im1.width / im2.width)), resample=resample)
-    dst = Image.new("RGBA", (_im1.width, _im1.height + _im2.height))
-    dst.paste(_im1, (0, 0))
-    dst.paste(_im2, (0, _im1.height), _im2.convert("RGBA"))
+
+    if not isEmpty : 
+        dst = Image.new("RGBA", (_im1.width, _im1.height + _im2.height + 30))
+        dst.paste(_im1, (0, 0))
+        dst.paste(Image.new("RGBA", (_im1.width, GLOBAL_LINE_GAP),"white"), (0, _im1.height ))
+        dst.paste(_im2, (0, _im1.height  + GLOBAL_LINE_GAP), _im2.convert("RGBA"))
+    else :
+        dst = Image.new("RGBA", (_im1.width, _im1.height + _im2.height))
+        dst.paste(_im1, (0, 0))
+        dst.paste(_im2, (0, _im1.height), _im2.convert("RGBA"))
 
     return dst
 
@@ -145,13 +156,31 @@ def get_concat_v_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True)
 def main():
     gl = GlyphLoader("/home/itsnamgyu/calligram/input/glyph/hicau_mod0/", ext="tif")
     s = str(gl.character_set)[:1000]
-    character_set = []
+    character_set = [' ']
     i = 0
     for character in gl.character_set:
         character_set.append(chr(int(character, 16)))
         i = i + 1
-    generate_page_data(gl,"샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다", 2, "/home/itsnamgyu/calligram/output/{}.png".format(i))
+    loader = TextLoader(character_set)
+    all_data = loader.load_data("/home/itsnamgyu/calligram/input/text/kaist_corpus", verbose=True)
+    # generate_page_data(gl,"안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 ", 1, "/home/itsnamgyu/calligram/output/test.png")
+   
+    i = 0
+    character_per_page = int(( GLOBAL_HEIGHT/(GLOBAL_CW_HEIGHT+ GLOBAL_LINE_GAP)))* LETTER_PER_LINE * 2
+    print(character_per_page)
+    for data in all_data : 
+        i = i + 1
+        j = 0 
+        x = all_data[data]
+        strings = [x[k: k + character_per_page] for k in range(0, len(x), character_per_page)]
+        for string in strings : 
+            start = time.time()
+            j = j + 1
+            generate_page_data(gl,string, 1, "/home/itsnamgyu/calligram/output/{}_{}.png".format(i,j),character_per_page)
+            end = time.time()
+            print("finished generating {}_{}.png image in {} sec..".format(i,j,end-start) )
 
+ 
 
 if __name__ == "__main__":
     main()
@@ -167,4 +196,10 @@ for key in loaded_data:
     print("created {} data..".format(i))
     exit(0)
     i = i + 1
+     s = str(gl.character_set)[:1000]
+    character_set = []
+    i = 0
+    for character in gl.character_set:
+        character_set.append(chr(int(character, 16)))
+        i = i + 1
 """
