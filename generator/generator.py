@@ -17,7 +17,7 @@ GLOBAL_MARGIN_WIDTH = 100
 GLOBAL_WIDTH = 1000
 GLOBAL_HEIGHT = 1000
 GLOBAL_ROT = 10
-
+MAX_SIZE = 400
 
 def generate_page_data(gl: GlyphLoader, text, variant=None, output_path=None) -> Image:
     """
@@ -30,6 +30,7 @@ def generate_page_data(gl: GlyphLoader, text, variant=None, output_path=None) ->
     y = 0
     n = 20
     dst = Image.new('RGBA', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT), "WHITE")
+    text += ' ' * (MAX_SIZE - len(text))
     for i in range(0, len(text), n):
         im = generate_single_line(gl, text[i:i + n], 0, y, n, variant)
         dst = get_concat_v_resize(dst, im)
@@ -149,7 +150,7 @@ def main():
     for character in gl.character_set:
         character_set.append(chr(int(character, 16)))
         i = i + 1
-    generate_page_data(gl,"나는 이세진입니다. 오늘 이러한 것 을 하느라 시간을 보냈는데 참 의미가 있었던 것 같네요 호호호나는 이세진입니다. 오늘 이러한 것 을 하느라 시간을 보냈는데 참 의미가 있었던 것 같네요 호호호나는 이세진입니다. 오늘 이러한 것 을 하느라 시간을 보냈는데 참 의미가 있었던 것 같네요 호호호나는 이세진입니다. 오늘 이러한 것 을 하느라 시간을 보냈는데 참 의미가 있었던 것 같네요 호호호나는 이세진입니다. 오늘 이러한 것 을 하느라 시간을 보냈는데 참 의미가 있었던 것 같네요 호호호", 2, "/home/itsnamgyu/calligram/output/{}.png".format(i))
+    generate_page_data(gl,"샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다샘플 입니다", 2, "/home/itsnamgyu/calligram/output/{}.png".format(i))
 
 
 if __name__ == "__main__":
