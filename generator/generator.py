@@ -56,6 +56,7 @@ def generate_single_line(gl: GlyphLoader, text, start_x, start_y, size, variant=
     previous_rotation = 0
     i = 0
     dst = Image.new("RGBA", (GLOBAL_MARGIN_WIDTH, GLOBAL_CW_HEIGHT), "white")
+    text = text.lstrip()
     text += ' ' * (size - len(text))
     for c in text:
         if c.isspace():
