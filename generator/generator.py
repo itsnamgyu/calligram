@@ -11,15 +11,16 @@ from PIL import Image, ImageChops
 from data.glyph import GlyphLoader
 from data.text import TextLoader
 
-GLOBAL_CW_HEIGHT = 50  # character height and width
-GLOBAL_CW_WIDTH = 50
+GLOBAL_CW_HEIGHT = 35  # character height and width
+GLOBAL_CW_WIDTH = 35
+#GLOBAL_CW_HEIGHT = 20  # for smaller characters 
+# GLOBAL_CW_WIDTH = 20
 GLOBAL_MARGIN_HEIGHT = 100
 GLOBAL_MARGIN_WIDTH = 100
-GLOBAL_WIDTH = 500
-GLOBAL_HEIGHT = 500
+GLOBAL_WIDTH = 1000
+GLOBAL_HEIGHT = 1000
 GLOBAL_MAX_ROTATION = 10
 GLOBAL_LINE_HEIGHT = 30
-CHARACTERS_PER_LINE = 50
 SPECIAL_CHARACTERS = ['.', ',', '?', ';', '!', '"', '\'', '/', '\'', '~', '@', '#', '%', '^', '&', '*', '(', ')', '-',
                       '+', '>', '<', '[', ']', '{', '}', '₩']
 
@@ -33,6 +34,8 @@ def generate_page_data(gl: GlyphLoader, text, variant, output_path=None, charact
     :return: Image
     """
     y = 0
+    CHARACTERS_PER_LINE = int((GLOBAL_WIDTH / GLOBAL_CW_WIDTH)) - 1 
+    page = Image.new('RGB', (GLOBAL_WIDTH + 2 * GLOBAL_MARGIN_WIDTH, GLOBAL_HEIGHT + 2*  GLOBAL_MARGIN_HEIGHT), "WHITE")
     dst = Image.new('RGB', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT), "WHITE")
     left = (character_per_page - len(text)) / CHARACTERS_PER_LINE
 
@@ -41,13 +44,15 @@ def generate_page_data(gl: GlyphLoader, text, variant, output_path=None, charact
         dst = get_concat_v_resize(dst, im)
         y = y + GLOBAL_CW_HEIGHT
 
+    """
     dst = get_concat_v_resize(dst, Image.new('RGB', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT), "WHITE"), True, True)
     if GLOBAL_HEIGHT - y > 0:
         dst = get_concat_v_resize(dst, Image.new('RGB', (GLOBAL_WIDTH, GLOBAL_HEIGHT - y), "WHITE"), True, True)
-
+    """
+    page.paste(dst,(GLOBAL_MARGIN_WIDTH,GLOBAL_MARGIN_HEIGHT))
     if output_path:
-        dst.save(output_path)
-    return dst
+        page.save(output_path)
+    return page
 
 
 def generate_single_line(gl: GlyphLoader, text, start_x, start_y, size, variant):
@@ -72,9 +77,11 @@ def generate_single_line(gl: GlyphLoader, text, start_x, start_y, size, variant)
             dst = get_concat_h_resize(dst, img, True, False)
         elif c in SPECIAL_CHARACTERS:
             img = gl.load_glyph(c, variant).convert("RGB")
+            img.resize((GLOBAL_CW_WIDTH, GLOBAL_CW_HEIGHT), Image.ANTIALIAS)
             dst = get_concat_h_resize(dst, img, True, True)
         else:
             img = trim(gl.load_glyph(c, variant)).convert("RGB")
+            img.resize((GLOBAL_CW_WIDTH, GLOBAL_CW_HEIGHT), Image.ANTIALIAS)
             dst = get_concat_h_resize(dst, img, True, True)
         previous_x, previous_y, previous_rotation = calculate_next_position(previous_x, previous_y, previous_rotation)
         i = i + 1
@@ -128,6 +135,8 @@ def trim(im):
     bbox = diff.getbbox()
     if bbox:
         return im.crop(bbox)
+    else :
+        return im 
 
 
 def get_concat_v_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True, isEmpty=False):
@@ -170,8 +179,8 @@ def main():
 
     output_dir = "/home/itsnamgyu/calligram/output/generator_test"
     os.makedirs(output_dir, exist_ok=True)
-
-    characters_per_page = int((GLOBAL_HEIGHT / (GLOBAL_CW_HEIGHT + GLOBAL_LINE_HEIGHT))) * CHARACTERS_PER_LINE * 2
+    CHARACTERS_PER_LINE = int((GLOBAL_WIDTH / GLOBAL_CW_WIDTH)) - 1 
+    characters_per_page = int((GLOBAL_HEIGHT / (GLOBAL_CW_HEIGHT + GLOBAL_LINE_HEIGHT))) * CHARACTERS_PER_LINE 
     print("Characters per page:", characters_per_page)
     items = itertools.product(range(0, gl.variants), all_data.items())
     total = gl.variants * len(all_data)
@@ -191,6 +200,7 @@ def main():
         generate_page_data(gl, string, variant,
                            os.path.join(output_dir, "text{:04d}_{}_{:04d}_{:06d}.jpg".format(i, key, variant, offset)),
                            characters_per_page)
+        
 
 
 if __name__ == "__main__":
