@@ -2,21 +2,21 @@
 Script for generating full page text images
 """
 
-import argparse
-import json
+import itertools
 import os
 import random
+
+import tqdm
 from PIL import Image, ImageChops
 from data.glyph import GlyphLoader
 from data.text import TextLoader
-import time
 
 GLOBAL_CW_HEIGHT = 50  # character height and width
 GLOBAL_CW_WIDTH = 50
 GLOBAL_MARGIN_HEIGHT = 100
 GLOBAL_MARGIN_WIDTH = 100
-GLOBAL_WIDTH = 1000
-GLOBAL_HEIGHT = 1000
+GLOBAL_WIDTH = 500
+GLOBAL_HEIGHT = 500
 GLOBAL_MAX_ROTATION = 10
 GLOBAL_LINE_HEIGHT = 30
 CHARACTERS_PER_LINE = 50
@@ -166,27 +166,31 @@ def main():
         i = i + 1
     loader = TextLoader(character_set)
     all_data = loader.load_data("/home/itsnamgyu/calligram/input/text/kaist_corpus", verbose=True)
-    # generate_page_data(gl,"안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 ", 1, "/home/itsnamgyu/calligram/output/test.png")
+    # generate_page_data(gl,"안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 ", 1, "/Users/itsnamgyu/code/calligram/output/test.png")
 
-    i = 0
-    character_per_page = int((GLOBAL_HEIGHT / (GLOBAL_CW_HEIGHT + GLOBAL_LINE_HEIGHT))) * CHARACTERS_PER_LINE * 2
-    print(character_per_page)
-    for data in all_data:
-        i = i + 1
-        j = 0
-        x = all_data[data]
-        strings = [x[k: k + character_per_page] for k in range(0, len(x), character_per_page)]
-        for string in strings:
-            j = j + 1
-            text_file = open("/home/itsnamgyu/calligram/output/text{}_{}.txt".format(i, j), "w")
-            text_file.write(string)
-            text_file.close()
-            for m in range(0, gl.variants):
-                start = time.time()
-                generate_page_data(gl, string, m, "/home/itsnamgyu/calligram/output/text{}_{}_{}.jpg".format(i, j, m),
-                                   character_per_page)
-                end = time.time()
-                print("f/home/itsnamgyu/calligram/output/text{}_{}_{}.jpg".format(i, j, m, end - start))
+    output_dir = "/home/itsnamgyu/calligram/output/generator_test"
+    os.makedirs(output_dir, exist_ok=True)
+
+    characters_per_page = int((GLOBAL_HEIGHT / (GLOBAL_CW_HEIGHT + GLOBAL_LINE_HEIGHT))) * CHARACTERS_PER_LINE * 2
+    print("Characters per page:", characters_per_page)
+    items = itertools.product(range(0, gl.variants), all_data.items())
+    total = gl.variants * len(all_data)
+    print("Generating pages for {} variants for {} strings".format(gl.variants, len(all_data)))
+
+    for i, (variant, data) in tqdm.tqdm(enumerate(items), total=total):
+        key, string = data
+        if len(string) > characters_per_page:
+            offset = random.randint(0, len(string) - characters_per_page)
+            string = string[offset: offset + characters_per_page]
+        else:
+            offset = 0
+
+        with open(os.path.join(output_dir, "text{:04d}_{}_{:04d}_{:06d}.txt".format(i, key, variant, offset)),
+                  "w") as f:
+            f.write(string)
+        generate_page_data(gl, string, variant,
+                           os.path.join(output_dir, "text{:04d}_{}_{:04d}_{:06d}.jpg".format(i, key, variant, offset)),
+                           characters_per_page)
 
 
 if __name__ == "__main__":
@@ -195,11 +199,11 @@ if __name__ == "__main__":
 """    
 
 loader = TextLoader(character_set)
-loaded_data = loader.load_data('/home/itsnamgyu/calligram/input/text/kaist_corpus')
+loaded_data = loader.load_data('/Users/itsnamgyu/code/calligram/input/text/kaist_corpus')
 i = 0
 print("finished loaded text...")
 for key in loaded_data:    
-    generate_page_data(gl, loaded_data[key],"/home/itsnamgyu/calligram/output/{}.jpg".format(i))
+    generate_page_data(gl, loaded_data[key],"/Users/itsnamgyu/code/calligram/output/{}.jpg".format(i))
     print("created {} data..".format(i))
     exit(0)
     i = i + 1
