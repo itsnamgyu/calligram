@@ -8,6 +8,7 @@ import os
 import re
 import warnings
 from collections import defaultdict
+from functools import lru_cache
 from typing import Set
 import random
 from PIL import Image
@@ -46,23 +47,29 @@ class GlyphLoader:
         self.pids = pids
         self.variants = len(pids)
 
-    def load_glyph(self, character, variant_index=None, path_only=False):
-        """
-        :param character: "가", "나", "다", etc.
-        :param variant_index: Whose handwriting? Range: [0, len(self.variants)) (random if None)
-        :param path_only: Whether to return path of image file (else, PIL Image)
-        :return:
-        """
+    def load_glyph_path(self, character, variant_index):
         if not 0 <= variant_index < len(self.pids):
-            warnings.warn("Varient index {} is out of bounds [{}, {})".format(variant_index, 0, len(self.pids)))
-            variant = None
-        if variant_index is None:
-            variant_index = random.randint(0, len(self.pids))
+            raise ValueError("Invalid variant index")
         pid = self.pids[variant_index]
         hex = "{:04X}".format(ord(character))
         path = os.path.join(self.dataset_dir, pid, "{}.{}".format(hex, self.ext))
+        return path
 
-        if path_only:
-            return path
-        else:
-            return Image.open(path)
+    @lru_cache(maxsize=5000)
+    def load_glyph(self, character, variant_index):
+        """
+        :param character: "가", "나", "다", etc.
+        :param variant_index: Whose handwriting? Range: [0, len(self.variants)) (random if None)
+        :return:
+        """
+        path = self.load_glyph_path(character, variant_index)
+        return Image.open(path)
+
+    def load_random_glyph(self, character):
+        """
+        :param character: "가", "나", "다", etc.
+        :param variant_index: Whose handwriting? Range: [0, len(self.variants)) (random if None)
+        :return:
+        """
+        variant_index = random.randint(0, len(self.pids))
+        return self.load_glyph(character, variant_index)

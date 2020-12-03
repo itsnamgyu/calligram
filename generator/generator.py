@@ -17,11 +17,14 @@ GLOBAL_MARGIN_HEIGHT = 100
 GLOBAL_MARGIN_WIDTH = 100
 GLOBAL_WIDTH = 1000
 GLOBAL_HEIGHT = 1000
-GLOBAL_ROT = 10
-GLOBAL_LINE_GAP = 30
-LETTER_PER_LINE = 50
-special_characters = ['.', ',', '?', ';', '!', '"', '\'', '/', '\'', '~','@', '#', '%','^','&','*','(',')','-','+', '>', '<', '[', ']', '{', '}', '₩']
-def generate_page_data(gl: GlyphLoader, text, variant=None, output_path=None, character_per_page=2000) -> Image:
+GLOBAL_MAX_ROTATION = 10
+GLOBAL_LINE_HEIGHT = 30
+CHARACTERS_PER_LINE = 50
+SPECIAL_CHARACTERS = ['.', ',', '?', ';', '!', '"', '\'', '/', '\'', '~', '@', '#', '%', '^', '&', '*', '(', ')', '-',
+                      '+', '>', '<', '[', ']', '{', '}', '₩']
+
+
+def generate_page_data(gl: GlyphLoader, text, variant, output_path=None, character_per_page=2000) -> Image:
     """
     :param gl:
     :param text: text to print out on the page
@@ -31,23 +34,23 @@ def generate_page_data(gl: GlyphLoader, text, variant=None, output_path=None, ch
     """
     y = 0
     dst = Image.new('RGB', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT), "WHITE")
-    left = (character_per_page  - len(text)) / LETTER_PER_LINE
+    left = (character_per_page - len(text)) / CHARACTERS_PER_LINE
 
-    for i in range(0, len(text), LETTER_PER_LINE):
-        im = generate_single_line(gl, text[i:i + LETTER_PER_LINE], 0, y, LETTER_PER_LINE, variant)
+    for i in range(0, len(text), CHARACTERS_PER_LINE):
+        im = generate_single_line(gl, text[i:i + CHARACTERS_PER_LINE], 0, y, CHARACTERS_PER_LINE, variant)
         dst = get_concat_v_resize(dst, im)
         y = y + GLOBAL_CW_HEIGHT
 
-    dst = get_concat_v_resize(dst, Image.new('RGB', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT), "WHITE"),True,True)
-    if GLOBAL_HEIGHT-y > 0 :
-        dst = get_concat_v_resize(dst, Image.new('RGB', (GLOBAL_WIDTH, GLOBAL_HEIGHT-y), "WHITE"),True,True)
+    dst = get_concat_v_resize(dst, Image.new('RGB', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT), "WHITE"), True, True)
+    if GLOBAL_HEIGHT - y > 0:
+        dst = get_concat_v_resize(dst, Image.new('RGB', (GLOBAL_WIDTH, GLOBAL_HEIGHT - y), "WHITE"), True, True)
 
     if output_path:
         dst.save(output_path)
     return dst
 
 
-def generate_single_line(gl: GlyphLoader, text, start_x, start_y, size, variant=None):
+def generate_single_line(gl: GlyphLoader, text, start_x, start_y, size, variant):
     """
     print out a single line of images 
         :param : 
@@ -65,17 +68,17 @@ def generate_single_line(gl: GlyphLoader, text, start_x, start_y, size, variant=
     text += ' ' * (size - len(text))
     for c in text:
         if c.isspace():
-            img = Image.new("RGB", (GLOBAL_CW_WIDTH, GLOBAL_CW_HEIGHT),"white")
-            dst = get_concat_h_resize(dst, img,True,False)
-        elif c in special_characters : 
+            img = Image.new("RGB", (GLOBAL_CW_WIDTH, GLOBAL_CW_HEIGHT), "white")
+            dst = get_concat_h_resize(dst, img, True, False)
+        elif c in SPECIAL_CHARACTERS:
             img = gl.load_glyph(c, variant).convert("RGB")
-            dst = get_concat_h_resize(dst, img,True,True)
-        else :
+            dst = get_concat_h_resize(dst, img, True, True)
+        else:
             img = trim(gl.load_glyph(c, variant)).convert("RGB")
-            dst = get_concat_h_resize(dst, img,True,True)
+            dst = get_concat_h_resize(dst, img, True, True)
         previous_x, previous_y, previous_rotation = calculate_next_position(previous_x, previous_y, previous_rotation)
         i = i + 1
-    dst = get_concat_h_resize(dst, Image.new("RGB", (GLOBAL_MARGIN_WIDTH, GLOBAL_CW_HEIGHT),"white"),True,False)
+    dst = get_concat_h_resize(dst, Image.new("RGB", (GLOBAL_MARGIN_WIDTH, GLOBAL_CW_HEIGHT), "white"), True, False)
     return dst
 
 
@@ -94,10 +97,10 @@ def calculate_next_position(previous_x, previous_y, previous_rotation):
 
 
 def get_concat_h_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True, rotate_image=True):
-    if rotate_image  : 
-        ro = GLOBAL_ROT * random.uniform(-1, 1)
+    if rotate_image:
+        ro = GLOBAL_MAX_ROTATION * random.uniform(-1, 1)
         im2 = im2.rotate(ro, fillcolor='WHITE', expand=True)
-    if resize_big_image :
+    if resize_big_image:
         im2.resize((GLOBAL_CW_WIDTH, GLOBAL_CW_HEIGHT), Image.ANTIALIAS)
 
     if im1.height == im2.height:
@@ -127,7 +130,6 @@ def trim(im):
         return im.crop(bbox)
 
 
-
 def get_concat_v_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True, isEmpty=False):
     if im1.width == im2.width:
         _im1 = im1
@@ -140,13 +142,13 @@ def get_concat_v_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True,
         _im1 = im1
         _im2 = im2.resize((im1.width, int(im2.height * im1.width / im2.width)), resample=resample)
 
-    if not isEmpty : 
-        GAP = int(GLOBAL_LINE_GAP * random.uniform(0.3,1))
+    if not isEmpty:
+        GAP = int(GLOBAL_LINE_HEIGHT * random.uniform(0.3, 1))
         dst = Image.new("RGB", (_im1.width, _im1.height + _im2.height + GAP))
         dst.paste(_im1, (0, 0))
-        dst.paste(Image.new("RGB", (_im1.width, GAP),"white"), (0, _im1.height ))
-        dst.paste(_im2, (0, _im1.height  + GAP))
-    else :
+        dst.paste(Image.new("RGB", (_im1.width, GAP), "white"), (0, _im1.height))
+        dst.paste(_im2, (0, _im1.height + GAP))
+    else:
         dst = Image.new("RGB", (_im1.width, _im1.height + _im2.height))
         dst.paste(_im1, (0, 0))
         dst.paste(_im2, (0, _im1.height))
@@ -165,27 +167,27 @@ def main():
     loader = TextLoader(character_set)
     all_data = loader.load_data("/home/itsnamgyu/calligram/input/text/kaist_corpus", verbose=True)
     # generate_page_data(gl,"안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 안녕하세요 제 이름이 뭐냐고요? 그건 말이죵~ 안알려줌 그래 ", 1, "/home/itsnamgyu/calligram/output/test.png")
-   
+
     i = 0
-    character_per_page = int(( GLOBAL_HEIGHT/(GLOBAL_CW_HEIGHT+ GLOBAL_LINE_GAP)))* LETTER_PER_LINE * 2
+    character_per_page = int((GLOBAL_HEIGHT / (GLOBAL_CW_HEIGHT + GLOBAL_LINE_HEIGHT))) * CHARACTERS_PER_LINE * 2
     print(character_per_page)
-    for data in all_data : 
+    for data in all_data:
         i = i + 1
-        j = 0 
+        j = 0
         x = all_data[data]
         strings = [x[k: k + character_per_page] for k in range(0, len(x), character_per_page)]
-        for string in strings : 
+        for string in strings:
             j = j + 1
-            text_file = open("/home/itsnamgyu/calligram/output/text{}_{}.txt".format(i,j), "w")
+            text_file = open("/home/itsnamgyu/calligram/output/text{}_{}.txt".format(i, j), "w")
             text_file.write(string)
             text_file.close()
-            for m in range(0, gl.variants) :
+            for m in range(0, gl.variants):
                 start = time.time()
-                generate_page_data(gl,string, m, "/home/itsnamgyu/calligram/output/text{}_{}_{}.jpg".format(i,j,m),character_per_page)
+                generate_page_data(gl, string, m, "/home/itsnamgyu/calligram/output/text{}_{}_{}.jpg".format(i, j, m),
+                                   character_per_page)
                 end = time.time()
-                print("f/home/itsnamgyu/calligram/output/text{}_{}_{}.jpg".format(i,j,m,end-start) )
+                print("f/home/itsnamgyu/calligram/output/text{}_{}_{}.jpg".format(i, j, m, end - start))
 
- 
 
 if __name__ == "__main__":
     main()
