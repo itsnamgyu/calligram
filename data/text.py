@@ -31,7 +31,8 @@ class TextLoader:
 
                     cleaned_text = self.clean_string(string)
 
-                    newdict[name] = cleaned_text
+                    key = os.path.splitext(name)[0]
+                    newdict[key] = cleaned_text
 
         return newdict
         # raise NotImplementedError()
