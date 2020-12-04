@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
 Script for generating full page text images
 """
@@ -5,15 +7,21 @@ Script for generating full page text images
 import itertools
 import os
 import random
+import sys
+from multiprocessing import Pool
+from typing import Tuple, List
 
 import tqdm
 from PIL import Image, ImageChops
+from tqdm.contrib.concurrent import process_map
+
 from data.glyph import GlyphLoader
 from data.text import TextLoader
 
+MAX_WORKERS = 8
 GLOBAL_CW_HEIGHT = 35  # character height and width
 GLOBAL_CW_WIDTH = 35
-#GLOBAL_CW_HEIGHT = 20  # for smaller characters 
+# GLOBAL_CW_HEIGHT = 20  # for smaller characters
 # GLOBAL_CW_WIDTH = 20
 GLOBAL_MARGIN_HEIGHT = 100
 GLOBAL_MARGIN_WIDTH = 100
@@ -24,22 +32,30 @@ GLOBAL_LINE_HEIGHT = 30
 SPECIAL_CHARACTERS = ['.', ',', '?', ';', '!', '"', '\'', '/', '\'', '~', '@', '#', '%', '^', '&', '*', '(', ')', '-',
                       '+', '>', '<', '[', ']', '{', '}', '₩']
 
-def generate_page_data(gl: GlyphLoader, text, variant, output_path=None, character_per_page=2000) -> Image:
+OUTPUT_DIR = "/Users/itsnamgyu/code/calligram/output/generator_test"
+
+
+def generate_page_data(gl: GlyphLoader, text, variant, output_path=None, character_per_page=2000) -> Tuple[
+    Image.Image, str]:
     """
     :param gl:
     :param text: text to print out on the page
     :param output_path: path to save the generated image data if specified.
     :param variant: glyph variant
-    :return: Image
+    :return: Image, text (with linebreaks)
     """
     y = 0
-    CHARACTERS_PER_LINE = int((GLOBAL_WIDTH / GLOBAL_CW_WIDTH)) - 1 
-    page = Image.new('RGB', (GLOBAL_WIDTH + 2 * GLOBAL_MARGIN_WIDTH, GLOBAL_HEIGHT + 2*  GLOBAL_MARGIN_HEIGHT), "WHITE")
+    CHARACTERS_PER_LINE = int((GLOBAL_WIDTH / GLOBAL_CW_WIDTH)) - 1
+    page = Image.new('RGB', (GLOBAL_WIDTH + 2 * GLOBAL_MARGIN_WIDTH, GLOBAL_HEIGHT + 2 * GLOBAL_MARGIN_HEIGHT), "WHITE")
     dst = Image.new('RGB', (GLOBAL_WIDTH, GLOBAL_MARGIN_HEIGHT), "WHITE")
     left = (character_per_page - len(text)) / CHARACTERS_PER_LINE
 
+    lines = []
     for i in range(0, len(text), CHARACTERS_PER_LINE):
-        im = generate_single_line(gl, text[i:i + CHARACTERS_PER_LINE], 0, y, CHARACTERS_PER_LINE, variant)
+        lines.append(text[i:i + CHARACTERS_PER_LINE])
+
+    for line in lines:
+        im = generate_single_line(gl, line, 0, y, CHARACTERS_PER_LINE, variant)
         dst = get_concat_v_resize(dst, im)
         y = y + GLOBAL_CW_HEIGHT
 
@@ -48,10 +64,13 @@ def generate_page_data(gl: GlyphLoader, text, variant, output_path=None, charact
     if GLOBAL_HEIGHT - y > 0:
         dst = get_concat_v_resize(dst, Image.new('RGB', (GLOBAL_WIDTH, GLOBAL_HEIGHT - y), "WHITE"), True, True)
     """
-    page.paste(dst,(GLOBAL_MARGIN_WIDTH,GLOBAL_MARGIN_HEIGHT))
+    page.paste(dst, (GLOBAL_MARGIN_WIDTH, GLOBAL_MARGIN_HEIGHT))
     if output_path:
         page.save(output_path)
-    return page
+
+    text = "\n".join(lines)
+
+    return page, text
 
 
 def generate_single_line(gl: GlyphLoader, text, start_x, start_y, size, variant):
@@ -134,8 +153,8 @@ def trim(im):
     bbox = diff.getbbox()
     if bbox:
         return im.crop(bbox)
-    else :
-        return im 
+    else:
+        return im
 
 
 def get_concat_v_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True, isEmpty=False):
@@ -164,46 +183,80 @@ def get_concat_v_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True,
     return dst
 
 
+def _generate_data(item):
+    i, (variant, data, characters_per_page, gl) = item
+    key, string = data
+    if len(string) > characters_per_page:
+        # For strings that may be longer than characters_per_page
+        offset = random.randint(0, len(string) - characters_per_page)
+        string = string[offset: offset + characters_per_page]
+    else:
+        offset = 0
+
+    output_image_path = os.path.join(OUTPUT_DIR, "text{:04d}_{}_{:04d}_{:06d}.jpg".format(i, key, variant, offset))
+    output_text_path = os.path.join(OUTPUT_DIR, "text{:04d}_{}_{:04d}_{:06d}.txt".format(i, key, variant, offset))
+    image, text = generate_page_data(gl, string, variant, output_image_path, characters_per_page)
+    with open(output_text_path, "w") as f:
+        f.write(text)
+
+
 def main():
-    gl = GlyphLoader("/home/itsnamgyu/calligram/input/glyph/hicau_mod0/", ext="tif")
+    gl = GlyphLoader("/Users/itsnamgyu/code/calligram/input/glyph/hicau_mod0/", ext="tif")
     s = str(gl.character_set)[:1000]
     character_set = [' ']
     i = 0
     for character in gl.character_set:
         character_set.append(chr(int(character, 16)))
         i = i + 1
-    character_set = ['제', '억', '럼', '했', '워', '노', '밤', '책', '름', '언', '프', '오', '난', '남', '란', '로', '어', '다', '런', '까', '직', '에', '벌', '봄', '차', '엇', '디', '국', '녀', '겨', '루', '멀', '별', '써', '위', '레', '릴', '운', '슴', '퍼', '덤', '입', '기', '것', '외', '의', '파', '으', '북', '거', '득', '린', '무', '춘', '닭', '헤', '아', '소', '람', '비', '이', '하', '스', '고', '러', '힌', '흙', '습', '말', '절', '일', '신', '패', '풀', '성', '슬', '인', '애', '랑', '는', '헬', '끄', '교', '간', '십', '부', '덕', '계', '었', '네', '마', '버', '침', '봅', '사', '상', '묻', '딴', '던', '듯', '집', '같', '.', '걱', '할', '도', '있', '속', '학', '라', '씩', '강', '을', '면', '지', '동', '들', '웃', '못', '끼', '된', '잔', '빛', '님', '쉬', '너', '합', '함', '많', '요', '우', '그', '청', '와', '처', '토', '않', '늘', '덮', '가', '보', '둘', '옥', '머', '은', '한', '잠', '울', '내', '니', '자', '정', ',', '새', '시', '불', '케', '경', '당', '피', '를', '리', '나', '쓸', '없', '과', '때', ' ', '추']
+    character_set = ['제', '억', '럼', '했', '워', '노', '밤', '책', '름', '언', '프', '오', '난', '남', '란', '로', '어', '다', '런', '까',
+                     '직', '에', '벌', '봄', '차', '엇', '디', '국', '녀', '겨', '루', '멀', '별', '써', '위', '레', '릴', '운', '슴', '퍼',
+                     '덤', '입', '기', '것', '외', '의', '파', '으', '북', '거', '득', '린', '무', '춘', '닭', '헤', '아', '소', '람', '비',
+                     '이', '하', '스', '고', '러', '힌', '흙', '습', '말', '절', '일', '신', '패', '풀', '성', '슬', '인', '애', '랑', '는',
+                     '헬', '끄', '교', '간', '십', '부', '덕', '계', '었', '네', '마', '버', '침', '봅', '사', '상', '묻', '딴', '던', '듯',
+                     '집', '같', '.', '걱', '할', '도', '있', '속', '학', '라', '씩', '강', '을', '면', '지', '동', '들', '웃', '못', '끼',
+                     '된', '잔', '빛', '님', '쉬', '너', '합', '함', '많', '요', '우', '그', '청', '와', '처', '토', '않', '늘', '덮', '가',
+                     '보', '둘', '옥', '머', '은', '한', '잠', '울', '내', '니', '자', '정', ',', '새', '시', '불', '케', '경', '당', '피',
+                     '를', '리', '나', '쓸', '없', '과', '때', '추']
     loader = TextLoader(character_set)
-    output_dir = "/home/itsnamgyu/calligram/output/generator_test"
-    os.makedirs(output_dir, exist_ok=True)
-    CHARACTERS_PER_LINE = int((GLOBAL_WIDTH / GLOBAL_CW_WIDTH)) - 1 
-    characters_per_page = int((GLOBAL_HEIGHT / (GLOBAL_CW_HEIGHT + GLOBAL_LINE_HEIGHT))) * CHARACTERS_PER_LINE 
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    characters_per_line = int((GLOBAL_WIDTH / GLOBAL_CW_WIDTH)) - 1
+    characters_per_page = int((GLOBAL_HEIGHT / (GLOBAL_CW_HEIGHT + GLOBAL_LINE_HEIGHT))) * characters_per_line
     print("Characters per page:", characters_per_page)
-    all_data = {}
-    for i in range(0,180) : 
-        all_data[i] = loader.generate_random_text(length=int(characters_per_page*random.uniform(0.5,1)))
-    items = itertools.product(range(0, gl.variants), all_data.items())
-    total = gl.variants * 180
-    print("Generating pages for {} variants for {} strings".format(gl.variants, len(all_data)))
 
-    for i, (variant, data) in tqdm.tqdm(enumerate(items), total=total):
+    all_data = {}
+    print("Loading random strings")
+    for i in tqdm.tqdm(range(0, 180)):
+        all_data[i] = loader.generate_random_text(max_length=int(characters_per_page * random.uniform(0.8, 1)))
+    items = itertools.product(range(0, gl.variants), all_data.items(), [characters_per_page], [gl])
+    total = gl.variants * 180
+
+    MAX_WORKERS = 8
+    print("Generating pages for {} variants for {} strings using up to {} workers".format(gl.variants, len(all_data), MAX_WORKERS))
+
+    process_map(_generate_data, enumerate(items), max_workers=MAX_WORKERS, total=total)
+    p = Pool(MAX_WORKERS)
+    p.map(_generate_data, enumerate(items))
+    """
+    for i, (variant, data) in tqdm.tqdm(, total=total):
         key, string = data
         if len(string) > characters_per_page:
+            # For strings that may be longer than characters_per_page
             offset = random.randint(0, len(string) - characters_per_page)
             string = string[offset: offset + characters_per_page]
         else:
             offset = 0
 
-        with open(os.path.join(output_dir, "text{:04d}_{}_{:04d}_{:06d}.txt".format(i, key, variant, offset)),
-                  "w") as f:
-            f.write(string)
-        generate_page_data(gl, string, variant,
-                           os.path.join(output_dir, "text{:04d}_{}_{:04d}_{:06d}.jpg".format(i, key, variant, offset)),
-                           characters_per_page)
+        output_image_path = os.path.join(output_dir, "text{:04d}_{}_{:04d}_{:06d}.jpg".format(i, key, variant, offset))
+        output_text_path = os.path.join(output_dir, "text{:04d}_{}_{:04d}_{:06d}.txt".format(i, key, variant, offset))
+        image, text = generate_page_data(gl, string, variant, output_image_path, characters_per_page)
+        with open(output_text_path, "w") as f:
+            f.write(text)
+    """
+
 
 """
 def main():
-    gl = GlyphLoader("/home/itsnamgyu/calligram/input/glyph/hicau_mod0/", ext="tif")
+    gl = GlyphLoader("/Users/itsnamgyu/code/calligram/input/glyph/hicau_mod0/", ext="tif")
     s = str(gl.character_set)[:1000]
     character_set = [' ']
     i = 0
@@ -212,8 +265,8 @@ def main():
         i = i + 1
     character_set = ['제', '억', '럼', '했', '워', '노', '밤', '책', '름', '언', '프', '오', '난', '남', '란', '로', '어', '다', '런', '까', '직', '에', '벌', '봄', '차', '엇', '디', '국', '녀', '겨', '루', '멀', '별', '써', '위', '레', '릴', '운', '슴', '퍼', '덤', '입', '기', '것', '외', '의', '파', '으', '북', '거', '득', '린', '무', '춘', '닭', '헤', '아', '소', '람', '비', '이', '하', '스', '고', '러', '힌', '흙', '습', '말', '절', '일', '신', '패', '풀', '성', '슬', '인', '애', '랑', '는', '헬', '끄', '교', '간', '십', '부', '덕', '계', '었', '네', '마', '버', '침', '봅', '사', '상', '묻', '딴', '던', '듯', '집', '같', '.', '걱', '할', '도', '있', '속', '학', '라', '씩', '강', '을', '면', '지', '동', '들', '웃', '못', '끼', '된', '잔', '빛', '님', '쉬', '너', '합', '함', '많', '요', '우', '그', '청', '와', '처', '토', '않', '늘', '덮', '가', '보', '둘', '옥', '머', '은', '한', '잠', '울', '내', '니', '자', '정', ',', '새', '시', '불', '케', '경', '당', '피', '를', '리', '나', '쓸', '없', '과', '때', ' ', '추']
     loader = TextLoader(character_set)
-    all_data = loader.load_data("/home/itsnamgyu/calligram/input/text/kaist_corpus", verbose=True)
-    output_dir = "/home/itsnamgyu/calligram/output/generator_test"
+    all_data = loader.load_data("/Users/itsnamgyu/code/calligram/input/text/kaist_corpus", verbose=True)
+    output_dir = "/Users/itsnamgyu/code/calligram/output/generator_test"
     os.makedirs(output_dir, exist_ok=True)
     CHARACTERS_PER_LINE = int((GLOBAL_WIDTH / GLOBAL_CW_WIDTH)) - 1 
     characters_per_page = int((GLOBAL_HEIGHT / (GLOBAL_CW_HEIGHT + GLOBAL_LINE_HEIGHT))) * CHARACTERS_PER_LINE 
@@ -236,8 +289,7 @@ def main():
         generate_page_data(gl, string, variant,
                            os.path.join(output_dir, "text{:04d}_{}_{:04d}_{:06d}.jpg".format(i, key, variant, offset)),
                            characters_per_page)
-"""   
-
+"""
 
 if __name__ == "__main__":
     main()
